@@ -65,7 +65,7 @@
 | RTミドルウエア | OpenRTM-aist-1.2.2-RELEASE (python版) |
 | 開発環境       | Visual Studio Code1.62.2              |
 | Python         | Python3.8.5                           |
-| 必要モジュール | Pyautogui, OpenCV, Pillow, os\|       |
+| 必要モジュール | Pyautogui, OpenCV, Pillow, os         |
 
 ![自動ホワイトボード消しのイメージ](./docs/img/whiteBoard.png)
 
