@@ -1,8 +1,4 @@
-﻿#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# -*- Python -*-
-
-"""
+﻿"""
  @file move.py
  @brief hannisiteisuruprogram
  @date $Date$
@@ -16,12 +12,7 @@ sys.path.append(".")
 # Import RTM module
 import RTC
 import OpenRTM_aist
-import RPi.GPIO as GPIO
 import serial
-
-PUL = 17
-DIR = 27
-ENA = 22 
 
 move_spec = ["implementation_id", "move",
 		 "type_name",         "move",
@@ -37,20 +28,19 @@ move_spec = ["implementation_id", "move",
 		 "conf.default.W_height", "300",
 		 "conf.default.M_power_width", "10",
 		 "conf.default.M_power_height", "10",
+		 "conf.default.port", "'/dev/ttyACM0'",
 
-		 "conf.__widget__.W_width", "slider",
-		 "conf.__widget__.W_height", "slider",
-		 "conf.__widget__.M_power_width", "slider",
-		 "conf.__widget__.M_power_height", "slider",
-		 "conf.__constraints__.W_width", "0<, 2000>",
-		 "conf.__constraints__.W_height", "0<, 500>",
-		 "conf.__constraints__.M_power_width", "0<, 100>",
-		 "conf.__constraints__.M_power_height", "0<, 100>",
+		 "conf.__widget__.W_width", "text",
+		 "conf.__widget__.W_height", "text",
+		 "conf.__widget__.M_power_width", "text",
+		 "conf.__widget__.M_power_height", "text",
+		 "conf.__widget__.port", "text",
 
          "conf.__type__.W_width", "int",
          "conf.__type__.W_height", "int",
          "conf.__type__.M_power_width", "int",
          "conf.__type__.M_power_height", "int",
+         "conf.__type__.port", "string",
 
 		 ""]
 
@@ -67,6 +57,7 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 		"""
 		"""
 		self._StateOut = OpenRTM_aist.OutPort("State", self._d_State)
+
 
 		"""
 		
@@ -92,18 +83,32 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 		 - DefaultValue: 10
 		"""
 		self._M_power_height = [10]
+		"""
+		
+		 - Name:  port
+		 - DefaultValue: /dev/ttyACM0
+		"""
+		self._port = ['/dev/ttyACM0']
 
 	def onInitialize(self):
-
+		# Bind variables and configuration variable
 		self.bindParameter("W_width", self._W_width, "1000")
 		self.bindParameter("W_height", self._W_height, "300")
 		self.bindParameter("M_power_width", self._M_power_width, "10")
 		self.bindParameter("M_power_height", self._M_power_height, "10")
+		self.bindParameter("port", self._port, "'/dev/ttyACM0'")
 
+		# Set InPort buffers
 		self.addInPort("Trans",self._TransIn)
 
+		# Set OutPort buffers
 		self.addOutPort("State",self._StateOut)
 
+		# Set service provider to Ports
+
+		# Set service consumers to Ports
+
+		# Set CORBA Service Ports
 
 		return RTC.RTC_OK
 
@@ -112,46 +117,26 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 		#消す部分の始点、終点の座標変数を定義(cm)
 		self.start_x, self.start_y, self.end_x, self.end_y = 0, 0, 0, 0
 
-		ser = serial.Serial("Hard", 9600)
-
-		ser.write(b"init 1000 300 10")
+		ser = serial.Serial(str(self.port), 9600)
 
 		return RTC.RTC_OK
 
 	def move_main(self):
 
-		#横方向に始点まで回転させなければならないかを定義
-		need_rotate_x_F = self.start_x / self._M_power_width
-		#横方向に終点まで回転させなければならないかを定義
-		need_rotate_x_E = self.end_x / self._M_power_width
-		#縦方向に何回転させなければならないかを定義
-		need_rotate_y = self.end_y / self._M_power_height
-		#操作にディレイを掛けるための変数を定義
 		direy = 0.5
-		#コア部分の横の長さはモータ何回転分か
-		core_width = 5
 
-		#シリアル通信を用いてX方向に制御
-		ser.write(b"moveX" + str(need_rotate_x_F))
-		#おしつけ
-		ser.write(b"moveZ true")
-		#ループ終了判定用の変数
-		flag = 0
-
-		while flag <= self.end_x:
-			#シリアル通信を用いてY方向に制御
-			ser.write(b"moveY" + str(need_rotate_y))
-			ser.write(b"moveX" + str(core_width))
-			flag += core_width
-			time.sleep(direy)
-			ser.write(b"moveY" + str(-need_rotate_y))
-			ser.write(b"moveX" + str(core_width))
-			flag += core_width
-			time.sleep(direy)
+		self.act_height = round(self._M_power_height * self.end_y / self._W_height)
+		self.act_width = round(self._M_power_width * self.end_x / self._W_width)
 		
-		ser.write(b"moveZ false")
-		self._d_State = True
-		self._StateOut.write()
+		ser.write(b"rot " + str(act_height))
+		time.sleep(direy)
+		ser.write(b"rot " + str(-act_height))
+
+		self.init()
+	
+	def init(self):
+
+		ser.close()
 
 	def onExecute(self, ec_id):
 
@@ -169,6 +154,9 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 			self.move_main()
 	
 		return RTC.RTC_OK
+
+
+
 
 def moveInit(manager):
     profile = OpenRTM_aist.Properties(defaults_str=move_spec)
