@@ -90,9 +90,18 @@ void loop() {
       Serial.println("z");
       MoveZ(zRate);
     }else if(cmds[0].equals("rot")){
-      long z = cmds[1].toInt();
-      Serial.println("z test");
-      rotate(z, PULZ, DIRZ, ENAZ);
+      long index = cmds[1].toInt();
+      long r = cmds[2].toInt();
+      if(index == 0){
+        Serial.println("x test");
+        rotate(r, PULX, DIRX, ENAX);
+      }else if(index == 1){
+        Serial.println("y test");
+        rotate(r, PULY, DIRY, ENAY);
+      }else if(index == 2){
+        Serial.println("z test");
+        rotate(r, PULZ, DIRZ, ENAZ);
+      }
     }
   }
 }
