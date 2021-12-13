@@ -1,41 +1,24 @@
-﻿#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# -*- Python -*-
-
-"""
+﻿"""
  @file select.py
  @brief hannisiteisuruprogram
  @date $Date$
 
 
 """
-import sys
-import time
-sys.path.append(".")
 
-# Import RTM module
 import RTC
 import OpenRTM_aist
-
-import tkinter
+import Img
+import sys
 import time
-from PIL import Image, ImageTk
+import tkinter
 from datetime import datetime
-import os
+from PIL import Image, ImageTk
+import os 
+import numpy
+import cv2
+sys.path.append(".")
 
-
-# Import Service implementation class
-# <rtc-template block="service_impl">
-
-# </rtc-template>
-
-# Import Service stub modules
-# <rtc-template block="consumer_import">
-# </rtc-template>
-
-
-# This module's spesification
-# <rtc-template block="module_spec">
 select_spec = ["implementation_id", "select",
 		 "type_name",         "select",
 		 "description",       "hannisiteisuruprogram",
@@ -46,76 +29,46 @@ select_spec = ["implementation_id", "select",
 		 "max_instance",      "1",
 		 "language",          "Python",
 		 "lang_type",         "SCRIPT",
-		 "conf.default.template", "range_specification",
+		 "conf.default.hanni", "select",
 
-		 "conf.__widget__.template", "radio",
-		 "conf.__constraints__.template", "(range_specification,up_right,down_right,up_left,down_left)",
+		 "conf.__widget__.hanni", "radio",
+		 "conf.__constraints__.hanni", "(select,up_right,down_right,up_left,down_left,all)",
 
-         "conf.__type__.template", "string",
+         "conf.__type__.hanni", "string",
 
 		 ""]
 
 class select(OpenRTM_aist.DataFlowComponentBase):
 
-	##
-	# @brief constructor
-	# @param manager Maneger Object
-	#
 	def __init__(self, manager):
 		OpenRTM_aist.DataFlowComponentBase.__init__(self, manager)
 
-		self._d_Path = OpenRTM_aist.instantiateDataType(RTC.TimedString)
+		self._d_Img = OpenRTM_aist.instantiateDataType(Img.TimedCameraImage)
 		"""
 		"""
-		self._PathIn = OpenRTM_aist.InPort("Path", self._d_Path)
+		self._ImgIn = OpenRTM_aist.InPort("Img", self._d_Img)
 		self._d_Trans = OpenRTM_aist.instantiateDataType(RTC.TimedString)
 		"""
 		"""
 		self._TransOut = OpenRTM_aist.OutPort("Trans", self._d_Trans)
 
-
-
-
-
-		# initialize of configuration-data.
-		# <rtc-template block="init_conf_param">
 		"""
 		
 		 - Name:  config
-		 - DefaultValue: range_specification
+		 - DefaultValue: select
 		"""
-		self._config = ['range_specification']
-
-		# </rtc-template>
+		self._config = ['select']
 
 
-
-	##
-	#
-	# The initialize action (on CREATED->ALIVE transition)
-	# formaer rtc_init_entry()
-	#
-	# @return RTC::ReturnCode_t
-	#
-	#
 	def onInitialize(self):
-		# Bind variables and configuration variable
-		self.bindParameter("template", self._config, "range_specification")
+		self.bindParameter("hanni", self._config, "select")
 
-		# Set InPort buffers
-		self.addInPort("Path",self._PathIn)
+		self.addInPort("Img",self._ImgIn)
 
-		# Set OutPort buffers
 		self.addOutPort("Trans",self._TransOut)
 
-		# Set service provider to Ports
-
-		# Set service consumers to Ports
-
-		# Set CORBA Service Ports
-
 		return RTC.RTC_OK
-
+	
 	def create_canvas(self):
 
 		# ドラッグ開始
@@ -163,7 +116,7 @@ class select(OpenRTM_aist.DataFlowComponentBase):
 		
 		if self.state == True:
 
-			img_open = Image.open(self.path)
+			img_open = Image.fromarray(self.img_in)
 			img = img_open.resize((1000, 300))
 
 			root = tkinter.Tk()
@@ -185,20 +138,28 @@ class select(OpenRTM_aist.DataFlowComponentBase):
 
 	def onActivated(self, ec_id):
 
-		self.path = "ここにファイルのパスを格納する"
+		self.path = str(os.path.dirname(__file__) + "\\img\\photo.jpg")
 		self.state = False
-
+	
 		return RTC.RTC_OK
+
+	#def onDeactivated(self, ec_id):
+	#
+	# 	return RTC.RTC_OK
 
 	def onExecute(self, ec_id):
 
-		if self._PathIn.isNew():
-			self._d_Path = self._PathIn.read()
-			self.path = self._d_Path.data
-			self.state = True
-			self.create_canvas()
+		if not self._ImgIn.isNew():
+			return RTC.RTC_OK
 
+		data = self._ImgIn.read()
+		self.img_in = numpy.frombuffer(data.data.image.raw_data, numpy.uint8).reshape((data.data.image.height, data.data.image.width, 3))
+		self.img_in = cv2.cvtColor(self.img_in, cv2.COLOR_BGRA2BGR)
+		self.state = True
+		self.create_canvas()
+	
 		return RTC.RTC_OK
+
 
 def selectInit(manager):
     profile = OpenRTM_aist.Properties(defaults_str=select_spec)

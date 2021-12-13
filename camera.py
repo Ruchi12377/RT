@@ -5,17 +5,14 @@
 
 
 """
+import RTC
+import OpenRTM_aist
+import Img
+import cv2
+import os
 import sys
 import time
 sys.path.append(".")
-
-# Import RTM module
-import RTC
-
-import OpenRTM_aist
-import cv2
-import time
-import os
 
 camera_spec = ["implementation_id", "camera",
 		 "type_name",         "camera",
@@ -42,7 +39,7 @@ class camera(OpenRTM_aist.DataFlowComponentBase):
 		"""
 		"""
 		self._TransIn = OpenRTM_aist.InPort("Trans", self._d_Trans)
-		self._d_Path = OpenRTM_aist.instantiateDataType(RTC.TimedString)
+		self._d_Path = OpenRTM_aist.instantiateDataType(Img.TimedCameraImage)
 		"""
 		"""
 		self._PathOut = OpenRTM_aist.OutPort("Path", self._d_Path)
@@ -50,34 +47,26 @@ class camera(OpenRTM_aist.DataFlowComponentBase):
 		"""
 		"""
 		self._BackOut = OpenRTM_aist.OutPort("Back", self._d_Back)
-		
-	def onInitialize(self):
-		# Bind variables and configuration variable
 
-		# Set InPort buffers
+	def onInitialize(self):
+
 		self.addInPort("State",self._StateIn)
 		self.addInPort("Trans",self._TransIn)
 
-		# Set OutPort buffers
 		self.addOutPort("Path",self._PathOut)
 		self.addOutPort("Back",self._BackOut)
-
-		# Set service provider to Ports
-
-		# Set service consumers to Ports
-
-		# Set CORBA Service Ports
 
 		return RTC.RTC_OK
 
 	def onActivated(self, ec_id):
+	
 		self.state = False
 		self.start_x, self.start_y, self.end_x, self.end_y = 100, 200, 300, 400
 		#パスを指定
 		self.path = str(os.path.dirname(__file__) + "\\img\\photo.jpg")
-
+		
 		return RTC.RTC_OK
-	
+
 	def Capture(self):
 
 		print("撮影したいタイミングでyを、中断したい場合はnを押してください")
@@ -93,17 +82,18 @@ class camera(OpenRTM_aist.DataFlowComponentBase):
 			#特定のキーボード入力を待つ。ここでは[Y]と[N]
 			if k == ord('y'):
 				
-				#写真を撮影してあらかじめ指定したファイルに保存
-				cv2.imwrite(self.path, frame)
 				#受け取った座標でトリミング
-				dst_img = cv2.imread(self.path)
+				dst_img = frame
 				dst = dst_img[self.start_y:self.end_y,self.start_x:self.end_x, :]
-				#トリミングした写真を保存
-				cv2.imwrite(self.path, dst)
-
-				#写真のパスを渡す
-				self._d_Path.data = self.path
+				
+				self._d_Path.data.intrinsic.matrix_element = [0.0] * 5
+				self._d_Path.data.extrinsic = [[0.0]*4]*4
+				self._d_Path.data.image.format = Img.RGB
+				self._d_Path.data.image.width = dst.shape[1]
+				self._d_Path.data.image.height = dst.shape[0]
+				self._d_Path.data.image.raw_data = dst.tobytes()
 				self._PathOut.write()
+
 				#処理を繰り返さないようFalseに
 				self.state = False
 				self._d_State.data = False
@@ -129,9 +119,8 @@ class camera(OpenRTM_aist.DataFlowComponentBase):
 				cv2.destroyAllWindows()
 				break
 
-
 	def onExecute(self, ec_id):
-		
+
 		#Startからの信号受け取り
 		if self._StateIn.isNew():
 			self._d_State = self._StateIn.read()
@@ -155,8 +144,6 @@ class camera(OpenRTM_aist.DataFlowComponentBase):
 			self.Capture()
 	
 		return RTC.RTC_OK
-
-
 
 
 def cameraInit(manager):
