@@ -170,23 +170,23 @@ void Reset() {
 //serial call
 //targetXRate 0~100
 void MoveX(int targetXRate) {
-  currentXRate = sharedMove(targetXRate, currentXRate, xSize, PULX, DIRX, ENAX);
   Serial.println("MoveX");
+  currentXRate = sharedMove(targetXRate, currentXRate, xSize, PULX, DIRX, ENAX);
 }
 
 //serial call
 //targetYRate 0~100
 void MoveY(int targetYRate) {
-  currentYRate = sharedMove(targetYRate, currentYRate, ySize, PULY, DIRY, ENAY);
   Serial.println("MoveY");
+  currentYRate = sharedMove(targetYRate, currentYRate, ySize, PULY, DIRY, ENAY);
 }
 
 //serial call
 //押すか押さないか
 //targetZRate 0~100
 void MoveZ(int targetZRate) {
-  currentZRate = sharedMove(targetZRate, currentZRate, zDepth, PULZ, DIRZ, ENAZ);
   Serial.println("MoveZ");
+  currentZRate = sharedMove(targetZRate, currentZRate, zDepth, PULZ, DIRZ, ENAZ);
 }
 
 void nonInitializeError() {
