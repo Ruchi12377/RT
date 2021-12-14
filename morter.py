@@ -16,10 +16,10 @@ board_rt_width = 1000
 board_rt_height = 300
 
 #仮
-# start_x = 100
-# start_y = 100
-# end_x = 50
-# end_y = 200
+start_x = 100
+start_y = 100
+end_x = 50
+end_y = 200
 
 #シリアル通信の準備を行う
 ser = serial.Serial(port, 9600)
@@ -44,31 +44,32 @@ def moveZ(rate):
 def rot(direction, value):
     send("rot {0} {1}".format(direction, value))
 
-def sizeToRate(target, width):
-    return 
-
 #100移動に対して15秒かかるので
 def getMoveXTime(amount):
-    return math.ceil(15.0 / 100.0 * amount / 2.0)
+    return math.ceil(15.0 / 100.0 * amount)
 def getMoveYTime(amount):
-    return math.ceil(15.0 / 75.0 * amount / 2.0)
+    return math.ceil(15.0 / 75.0 * amount)
 
 #boardの大きさを初期化
 init(board_hard_width, board_hard_height, board_hard_depth)
 time.sleep(3)
 
+def pixelToRate(rtPixel, rtSize, hardSize):
+    return math.ceil(rtPixel / rtSize * hardSize)
+
 def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
     start_x = math.ceil(start_x_rate * board_hard_width / 100)
-    start_y = math.ceil(start_y_rate * board_hard_width / 100)
-    end_x = math.ceil(end_x_rate * board_hard_height / 100)
+    start_y = math.ceil(start_y_rate * board_hard_height / 100)
+    end_x = math.ceil(end_x_rate * board_hard_width / 100)
     end_y = math.ceil(end_y_rate * board_hard_height / 100)
 
-    xRate = start_x_rate
-    yRate = start_y_rate
-    moveX(xRate)
-    time.sleep(getMoveXTime(xRate))
-    moveY(yRate)
-    time.sleep(getMoveYTime(yRate))
+    moveX(start_x_rate)
+    time.sleep(getMoveXTime(start_x_rate))
+    print(start_x_rate)
+
+    moveY(start_y_rate)
+    time.sleep(getMoveYTime(start_y_rate))
+    print(start_y_rate)
 
     #何回ループするか
     l = math.ceil((end_x - start_x) / core_hard_width) + 2
@@ -82,7 +83,7 @@ def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
             targetYRate = start_y_rate
         
         #押し込み処理を入れる
-        #moveZ(100)
+        #moveZ(any value...)
         
         #上か下まで移動させる
         moveY(targetYRate)
@@ -90,16 +91,14 @@ def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
         time.sleep(getMoveYTime(targetYRate))
 
         #最後だけYを移動する
-        if(i == l - 1): 
-            #引く処理を入れる
-            #moveZ(0)
+        if(i == l - 1):
             break
 
         #横移動
         moveX(targetXRate)
+        print(targetXRate)
         time.sleep(getMoveXTime(targetXRate))
 
-    #moveZ(push)
     print("reset")
     reset()
 
