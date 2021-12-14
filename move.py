@@ -3,13 +3,16 @@
  @brief hannisiteisuruprogram
  @date $Date$
 
+
 """
+
+import RTC
 import sys
 import time
-sys.path.append(".")
-import RTC
-import OpenRTM_aist
+import math
 import serial
+import OpenRTM_aist
+sys.path.append(".")
 
 move_spec = ["implementation_id", "move",
 		 "type_name",         "move",
@@ -23,10 +26,11 @@ move_spec = ["implementation_id", "move",
 		 "lang_type",         "SCRIPT",
 		 "conf.default.W_width", "1000",
 		 "conf.default.W_height", "300",
-		 "conf.default.M_power_width", "10",
-		 "conf.default.M_power_height", "10",
-		 "conf.default.port", "'/dev/ttyACM0'",
+		 "conf.default.M_power_width", "100",
+		 "conf.default.M_power_height", "75",
+		 "conf.default.port", "COM4",
 		 "conf.default.M_power_push", "20",
+		 "conf.default.core_hard_width", "9",
 
 		 "conf.__widget__.W_width", "text",
 		 "conf.__widget__.W_height", "text",
@@ -34,6 +38,7 @@ move_spec = ["implementation_id", "move",
 		 "conf.__widget__.M_power_height", "text",
 		 "conf.__widget__.port", "text",
 		 "conf.__widget__.M_power_push", "text",
+		 "conf.__widget__.core_hard_width", "text",
 
          "conf.__type__.W_width", "int",
          "conf.__type__.W_height", "int",
@@ -41,16 +46,11 @@ move_spec = ["implementation_id", "move",
          "conf.__type__.M_power_height", "int",
          "conf.__type__.port", "string",
          "conf.__type__.M_power_push", "int",
+         "conf.__type__.core_hard_width", "int",
 
 		 ""]
 
 class move(OpenRTM_aist.DataFlowComponentBase):
-
-	init = "init"
-	reset = "reset"
-	moveX = "moveX"
-	moveY = "moveY"
-	moveZ = "moveZ"
 
 	def __init__(self, manager):
 		OpenRTM_aist.DataFlowComponentBase.__init__(self, manager)
@@ -64,51 +64,60 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 		"""
 		self._StateOut = OpenRTM_aist.OutPort("State", self._d_State)
 
+
 		"""
 		
-		 - Name:  W_width
+		 - Name:  board_rt_width
 		 - DefaultValue: 1000
 		"""
-		self._W_width = [1000]
+		self._board_rt_width = [1000]
 		"""
 		
-		 - Name:  W_height
+		 - Name:  board_rt_height
 		 - DefaultValue: 300
 		"""
-		self._W_height = [300]
+		self._board_rt_height = [300]
 		"""
 		
-		 - Name:  M_power_width
-		 - DefaultValue: 10
+		 - Name:  board_hard_width
+		 - DefaultValue: 100
 		"""
-		self._M_power_width = [10]
+		self._board_hard_width = [100]
 		"""
 		
-		 - Name:  M_power_height
-		 - DefaultValue: 10
+		 - Name:  board_hard_height
+		 - DefaultValue: 75
 		"""
-		self._M_power_height = [10]
+		self._board_hard_height = [75]
 		"""
 		
 		 - Name:  port
-		 - DefaultValue: /dev/ttyACM0
+		 - DefaultValue: COM4
 		"""
-		self._port = ['/dev/ttyACM0']
+		self._port = ['COM4']
 		"""
 		
-		 - Name:  M_power_push
-		 - DefaultValue: 2
+		 - Name:  board_hard_depth
+		 - DefaultValue: 20
 		"""
-		self._M_power_push = [2]
+		self._board_hard_depth = [20]
+		"""
+		
+		 - Name:  core_hard_width
+		 - DefaultValue: 9
+		"""
+		self._core_hard_width = [9]
+
 
 	def onInitialize(self):
 
-		self.bindParameter("W_width", self._W_width, "1000")
-		self.bindParameter("W_height", self._W_height, "300")
-		self.bindParameter("M_power_width", self._M_power_width, "10")
-		self.bindParameter("M_power_height", self._M_power_height, "10")
-		self.bindParameter("port", self._port, '/dev/ttyACM0')
-		self.bindParameter("M_power_push", self._M_power_push, "2")
+		self.bindParameter("W_width", self._board_rt_width, "1000")
+		self.bindParameter("W_height", self._board_rt_height, "300")
+		self.bindParameter("M_power_width", self._board_hard_width, "100")
+		self.bindParameter("M_power_height", self._board_hard_height, "75")
+		self.bindParameter("port", self._port, "COM4")
+		self.bindParameter("M_power_push", self._board_hard_depth, "20")
+		self.bindParameter("core_hard_width", self._core_hard_width, "9")
 
 		self.addInPort("Trans",self._TransIn)
 
@@ -117,54 +126,103 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 		return RTC.RTC_OK
 
 	def onActivated(self, ec_id):
-
-		self.start_x, self.start_y, self.end_x, self.end_y = 0, 0, 0, 0
-		ser = serial.Serial(self._port[0], 9600)
-		self.flag = 0
-		ser.write((init + " " + str(self._M_power_width) + " " + str(self._M_power_height) + " " + str(self._M_power_push)).encode())
+		
+		self.start_x = 0
+		self.start_y = 0
+		self.end_x = 0
+		self.end_y = 0
+		self.start_x_rate = 0
+		self.start_y_rate = 0
+		self.end_x_rate = 0
+		self.end_y_rate = 0
 
 		return RTC.RTC_OK
 
-	#def onDeactivated(self, ec_id):
-	#
-	#	return RTC.RTC_OK
+	def getMove(self):
 
-	def move_main(self):
+		#シリアル通信の準備を行う
+		ser = serial.Serial(port, 9600)
+		#シリアル通信が終わるまで待つ
+		time.sleep(3)
 
-		direy = 0.5
+		#シリアルでデータを送るための関数
+		def send(data):
+			ser.write(bytes(data, "utf-8"))
 
-		self.act_height_s = round(100 * self.start_y / self._W_height)
-		self.act_width_s = round(100 * self.start_x / self._W_width)
-		self.act_height_f = round(100 * self.end_y / self._W_height)
-		self.act_width_f = round(100 * self.end_x / self._W_width)
-		self.core_width = 5
+		#arduino側の機能を呼び出すための関数群
+		def init(x, y, z):
+			send("init {0} {1} {2}".format(x, y, z))
+		def reset():
+			ser.write(b"reset")
+		def moveX(rate):
+			send("moveX {0}".format(rate))
+		def moveY(rate):
+			send("moveY {0}".format(rate))
+		def moveZ(rate):
+			send("moveZ {0}".format(rate))
+		def rot(direction, value):
+			send("rot {0} {1}".format(direction, value))
 
-		#bytes型への変換
-		ser.write((moveX + " " + str(self.act_width_s)).encode())
-		time.sleep(direy)
-		ser.write((moveY + " " + str(self.act_height_s)).encode())
-		time.sleep(direy)
-		ser.write((moveZ + " " + str(-self._M_power_push)).encode())
+		#100移動に対して15秒かかるので
+		def getMoveXTime(amount):
+			return math.ceil(15.0 / 100.0 * amount)
+		def getMoveYTime(amount):
+			return math.ceil(15.0 / 75.0 * amount)
 
-		while self.flag < self.end_x:
+		#boardの大きさを初期化
+		init(self._board_hard_width, self._board_hard_height, self._board_hard_depth)
+		time.sleep(3)
 
-			time.sleep(direy)
-			ser.write((moveY + " " + str(self.act_height_f)).encode())
-			time.sleep(direy)
-			ser.write((moveX + " " +  str(self.core_width)).encode())
-			time.sleep(direy)
-			ser.write((moveY + " " + str(-self.act_height_s)).encode())
-			time.sleep(direy)
-			ser.write((moveX + " " + str(self.core_width)).encode())
-			self.flag += self.core_width
+		def pixelToRate(rtPixel, rtSize, hardSize):
+			return math.ceil(rtPixel / rtSize * hardSize)
 
-		ser.write((moveZ + " " + str(self._M_power_push)).encode())
+		def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
+			start_x = math.ceil(start_x_rate * self._board_hard_width / 100)
+			start_y = math.ceil(start_y_rate * self._board_hard_height / 100)
+			end_x = math.ceil(end_x_rate * self._board_hard_width / 100)
+			end_y = math.ceil(end_y_rate * self._board_hard_height / 100)
 
-		ser.write(reset.encode())
+			moveX(start_x_rate)
+			time.sleep(getMoveXTime(start_x_rate))
+			print(start_x_rate)
+
+			moveY(start_y_rate)
+			time.sleep(getMoveYTime(start_y_rate))
+			print(start_y_rate)
+
+			#何回ループするか
+			l = math.ceil((end_x - start_x) / self._core_hard_width) + 2
+			for i in range(1, l):
+				targetX = start_x + self._core_hard_width * i
+				targetXRate = math.ceil(targetX / self._board_hard_width * 100)
+				
+				if(i % 2 == 1):
+					targetYRate = end_y_rate
+				else:
+					targetYRate = start_y_rate
+				
+				#押し込み処理を入れる
+				#moveZ(any value...)
+				
+				#上か下まで移動させる
+				moveY(targetYRate)
+
+				time.sleep(getMoveYTime(targetYRate))
+
+				#最後だけYを移動する
+				if(i == l - 1):
+					break
+
+				#横移動
+				moveX(targetXRate)
+				print(targetXRate)
+				time.sleep(getMoveXTime(targetXRate))
+
+			print("reset")
+			reset()
+
+		eraser(10, 20, 40, 50)
 		ser.close()
-		self._d_State = True
-		self._StateOut.write()
-		self._d_State = False
 
 	def onExecute(self, ec_id):
 
@@ -179,9 +237,13 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 			self.end_x = int(num[start_y_num + 1:end_x_num])
 			end_y_num = num.find(",", end_x_num + 1)
 			self.end_y = int(num[end_x_num + 1:len(num)])
-			self.move_main()
-	
+			self.getMove()
+
 		return RTC.RTC_OK
+
+	#def onDeactivated(self, ec_id):
+	#
+	#	return RTC.RTC_OK
 
 
 
