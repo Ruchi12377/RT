@@ -1,20 +1,20 @@
 const int second = 304; //1周分のステッピングモーター回転の数
 
 //X stepping moter drive
-const int PULX = 7;
-const int DIRX = 6;
-const int ENAX = 5;
+const int PULX = 12;
+const int DIRX = 13;
+const int ENAX = 11;
 
 //Y stepping moter drive
-const int PULY = 10;
-const int DIRY = 9;
+const int PULY = 9;
+const int DIRY = 10;
 const int ENAY = 8;
 
 //Z stepping moter drive
 //Temp
-const int PULZ = 13;
-const int DIRZ = 12;
-const int ENAZ = 11;
+const int PULZ = 6;
+const int DIRZ = 7;
+const int ENAZ = 5;
 //ここまで定数
 
 //設定値
