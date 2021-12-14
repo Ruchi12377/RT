@@ -200,14 +200,16 @@ int sharedMove(int targetRate, int currentRate, int boardSize, int pul, int dir,
   }
 
   targetRate = constrain(targetRate, 0, 100);
-  int target = boardSize * targetRate / 100;
-  int current = boardSize * currentRate / 100;
+  int target = ceil(boardSize * targetRate / (float)100);
+  int current = ceil(boardSize * currentRate / (float)100);
   //範囲外に行ってしまわないように
   int moveDiff = target - current;
   moveDiff = constrain(moveDiff, -current, boardSize - current);
+  Serial.println(-current);
+  Serial.println(boardSize - current);
   Serial.println(moveDiff);
   rotate(moveDiff, pul, dir, ena);
-  currentRate = target;
+  currentRate = targetRate;
   return currentRate;
 }
 #pragma endregion

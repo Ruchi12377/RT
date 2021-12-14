@@ -1,62 +1,104 @@
 import serial 
 import time
+import math
 
+#port = "/dev/cu.usbmodem21101"
 port = "COM4"
-direy = 3
 
-power_width = 100
-power_height = 75
-power_push = 2
-W_width = 1000
-W_height = 300
-start_x, start_y, end_x, end_y = 100, 100, 500, 200
-flag = 0
-flag1 = 1
-core_width = 9
+#ハードウェア側の大きさ
+board_hard_width = 100
+board_hard_height = 75
+board_hard_depth = 2
+core_hard_width = 9
 
-act_height_s = round(100 * start_y / W_height)
-act_width_s = round(100 * start_x / W_width)
-act_height_f = round(100 * end_y / W_height)
-act_width_f = round(100 * end_x / W_width)
+#RTが扱うハードの大きさ
+board_rt_width = 1000
+board_rt_height = 300
 
-print(act_width_s,act_width_f,act_height_s,act_height_f)
+#仮
+# start_x = 100
+# start_y = 100
+# end_x = 50
+# end_y = 200
 
-ser = serial.Serial("COM4", 9600, timeout= 60)
+#シリアル通信の準備を行う
+ser = serial.Serial(port, 9600)
+#シリアル通信が終わるまで待つ
 time.sleep(3)
 
+#シリアルでデータを送るための関数
+def send(data):
+    ser.write(bytes(data, "utf-8"))
+
+#arduino側の機能を呼び出すための関数群
 def init(x, y, z):
-    ser.write(bytes("init {0} {1} {2}".format(x, y, z), "utf-8"))
+    send("init {0} {1} {2}".format(x, y, z))
 def reset():
     ser.write(b"reset")
 def moveX(rate):
-    ser.write(bytes("moveX {0}".format(rate), "utf-8"))
+    send("moveX {0}".format(rate))
 def moveY(rate):
-    ser.write(bytes("moveY {0}".format(rate), "utf-8"))
+    send("moveY {0}".format(rate))
 def moveZ(rate):
-    ser.write(bytes("moveZ {0}".format(rate), "utf-8"))
+    send("moveZ {0}".format(rate))
 def rot(direction, value):
-    ser.write(bytes("rot {0} {1}".format(direction, value), "utf-8"))
+    send("rot {0} {1}".format(direction, value))
 
-init(power_width,power_height,power_push)
-time.sleep(direy)
-moveX(act_width_s)
-time.sleep(direy)
-moveY(act_height_s)
-time.sleep(direy)
+def sizeToRate(target, width):
+    return 
 
-while flag < act_width_f:
-    moveY(act_height_f)
-    time.sleep(direy)
-    moveX(act_width_s + core_width * flag1)
-    time.sleep(direy)
-    moveY(act_height_s)
-    time.sleep(direy)
-    moveX(act_width_s + core_width * flag1)
-    time.sleep(direy)
-    flag1 += 1
-    flag += core_width
-    
+#100移動に対して15秒かかるので
+def getMoveXTime(amount):
+    return math.ceil(15.0 / 100.0 * amount / 2.0)
+def getMoveYTime(amount):
+    return math.ceil(15.0 / 75.0 * amount / 2.0)
 
-reset()
+#boardの大きさを初期化
+init(board_hard_width, board_hard_height, board_hard_depth)
+time.sleep(3)
 
+def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
+    start_x = math.ceil(start_x_rate * board_hard_width / 100)
+    start_y = math.ceil(start_y_rate * board_hard_width / 100)
+    end_x = math.ceil(end_x_rate * board_hard_height / 100)
+    end_y = math.ceil(end_y_rate * board_hard_height / 100)
+
+    xRate = start_x_rate
+    yRate = start_y_rate
+    moveX(xRate)
+    time.sleep(getMoveXTime(xRate))
+    moveY(yRate)
+    time.sleep(getMoveYTime(yRate))
+
+    #何回ループするか
+    l = math.ceil((end_x - start_x) / core_hard_width) + 2
+    for i in range(1, l):
+        targetX = start_x + core_hard_width * i
+        targetXRate = math.ceil(targetX / board_hard_width * 100)
+        
+        if(i % 2 == 1):
+            targetYRate = end_y_rate
+        else:
+            targetYRate = start_y_rate
+        
+        #押し込み処理を入れる
+        #moveZ(any value...)
+        
+        #上か下まで移動させる
+        moveY(targetYRate)
+
+        time.sleep(getMoveYTime(targetYRate))
+
+        #最後だけYを移動する
+        if(i == l - 1):
+            break
+
+        #横移動
+        moveX(targetXRate)
+        time.sleep(getMoveXTime(targetXRate))
+
+    print("reset")
+    reset()
+
+eraser(10, 20, 40, 50)
 ser.close()
