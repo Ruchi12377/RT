@@ -3,13 +3,10 @@
  @brief hannisiteisuruprogram
  @date $Date$
 
-
 """
 import sys
 import time
 sys.path.append(".")
-
-# Import RTM module
 import RTC
 import OpenRTM_aist
 import serial
@@ -29,22 +26,31 @@ move_spec = ["implementation_id", "move",
 		 "conf.default.M_power_width", "10",
 		 "conf.default.M_power_height", "10",
 		 "conf.default.port", "'/dev/ttyACM0'",
+		 "conf.default.M_power_push", "20",
 
 		 "conf.__widget__.W_width", "text",
 		 "conf.__widget__.W_height", "text",
 		 "conf.__widget__.M_power_width", "text",
 		 "conf.__widget__.M_power_height", "text",
 		 "conf.__widget__.port", "text",
+		 "conf.__widget__.M_power_push", "text",
 
          "conf.__type__.W_width", "int",
          "conf.__type__.W_height", "int",
          "conf.__type__.M_power_width", "int",
          "conf.__type__.M_power_height", "int",
          "conf.__type__.port", "string",
+         "conf.__type__.M_power_push", "int",
 
 		 ""]
 
 class move(OpenRTM_aist.DataFlowComponentBase):
+
+	init = "init"
+	reset = "reset"
+	moveX = "moveX"
+	moveY = "moveY"
+	moveZ = "moveZ"
 
 	def __init__(self, manager):
 		OpenRTM_aist.DataFlowComponentBase.__init__(self, manager)
@@ -57,7 +63,6 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 		"""
 		"""
 		self._StateOut = OpenRTM_aist.OutPort("State", self._d_State)
-
 
 		"""
 		
@@ -89,54 +94,77 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 		 - DefaultValue: /dev/ttyACM0
 		"""
 		self._port = ['/dev/ttyACM0']
+		"""
+		
+		 - Name:  M_power_push
+		 - DefaultValue: 2
+		"""
+		self._M_power_push = [2]
 
 	def onInitialize(self):
-		# Bind variables and configuration variable
+
 		self.bindParameter("W_width", self._W_width, "1000")
 		self.bindParameter("W_height", self._W_height, "300")
 		self.bindParameter("M_power_width", self._M_power_width, "10")
 		self.bindParameter("M_power_height", self._M_power_height, "10")
-		self.bindParameter("port", self._port, "'/dev/ttyACM0'")
+		self.bindParameter("port", self._port, '/dev/ttyACM0')
+		self.bindParameter("M_power_push", self._M_power_push, "2")
 
-		# Set InPort buffers
 		self.addInPort("Trans",self._TransIn)
 
-		# Set OutPort buffers
 		self.addOutPort("State",self._StateOut)
-
-		# Set service provider to Ports
-
-		# Set service consumers to Ports
-
-		# Set CORBA Service Ports
 
 		return RTC.RTC_OK
 
 	def onActivated(self, ec_id):
 
-		#消す部分の始点、終点の座標変数を定義(cm)
 		self.start_x, self.start_y, self.end_x, self.end_y = 0, 0, 0, 0
-
-		ser = serial.Serial(str(self.port), 9600)
+		ser = serial.Serial(self._port[0], 9600)
+		self.flag = 0
+		ser.write((init + " " + str(self._M_power_width) + " " + str(self._M_power_height) + " " + str(self._M_power_push)).encode())
 
 		return RTC.RTC_OK
+
+	#def onDeactivated(self, ec_id):
+	#
+	#	return RTC.RTC_OK
 
 	def move_main(self):
 
 		direy = 0.5
 
-		self.act_height = round(self._M_power_height * self.end_y / self._W_height)
-		self.act_width = round(self._M_power_width * self.end_x / self._W_width)
-		
-		ser.write(b"rot " + str(act_height))
+		self.act_height_s = round(100 * self.start_y / self._W_height)
+		self.act_width_s = round(100 * self.start_x / self._W_width)
+		self.act_height_f = round(100 * self.end_y / self._W_height)
+		self.act_width_f = round(100 * self.end_x / self._W_width)
+		self.core_width = 5
+
+		#bytes型への変換
+		ser.write((moveX + " " + str(self.act_width_s)).encode())
 		time.sleep(direy)
-		ser.write(b"rot " + str(-act_height))
+		ser.write((moveY + " " + str(self.act_height_s)).encode())
+		time.sleep(direy)
+		ser.write((moveZ + " " + str(-self._M_power_push)).encode())
 
-		self.init()
-	
-	def init(self):
+		while self.flag < self.end_x:
 
+			time.sleep(direy)
+			ser.write((moveY + " " + str(self.act_height_f)).encode())
+			time.sleep(direy)
+			ser.write((moveX + " " +  str(self.core_width)).encode())
+			time.sleep(direy)
+			ser.write((moveY + " " + str(-self.act_height_s)).encode())
+			time.sleep(direy)
+			ser.write((moveX + " " + str(self.core_width)).encode())
+			self.flag += self.core_width
+
+		ser.write((moveZ + " " + str(self._M_power_push)).encode())
+
+		ser.write(reset.encode())
 		ser.close()
+		self._d_State = True
+		self._StateOut.write()
+		self._d_State = False
 
 	def onExecute(self, ec_id):
 
@@ -154,7 +182,6 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 			self.move_main()
 	
 		return RTC.RTC_OK
-
 
 
 
