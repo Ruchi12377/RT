@@ -170,57 +170,44 @@ void Reset() {
 //serial call
 //targetXRate 0~100
 void MoveX(int targetXRate) {
-  if (initialized == false) return;
-
-  targetXRate = constrain(targetXRate, 0, 100);
-  int targetX = xSize * targetXRate / 100;
-  int currentX = xSize * currentXRate / 100;
-  //範囲外に行ってしまわないように
-  int minX = -currentX;
-  int maxX = xSize - currentX;
-  int moveDiff = targetX - currentX;
-  moveDiff = constrain(moveDiff, minX, maxX);
-  rotate(moveDiff, PULX, DIRX, ENAX);
-  currentXRate = targetXRate;
+  Serial.println("MoveX");
+  currentXRate = sharedMove(targetXRate, currentXRate, xSize, PULX, DIRX, ENAX);
 }
 
 //serial call
 //targetYRate 0~100
 void MoveY(int targetYRate) {
-  if (initialized == false) return;
-
-  targetYRate = constrain(targetYRate, 0, 100);
-  int targetY = ySize * targetYRate / 100;
-  int currentY = ySize * currentYRate / 100;
-  //範囲外に行ってしまわないように
-  int minY = -currentY;
-  int maxY = ySize - currentY;
-  int moveDiff = targetY - currentY;
-  moveDiff = constrain(moveDiff, minY, maxY);
-  rotate(moveDiff, PULY, DIRY, ENAY);
-  currentYRate = targetY;
+  Serial.println("MoveY");
+  currentYRate = sharedMove(targetYRate, currentYRate, ySize, PULY, DIRY, ENAY);
 }
 
 //serial call
 //押すか押さないか
 //targetZRate 0~100
 void MoveZ(int targetZRate) {
-  if (initialized == false) return;
-
-  targetZRate = constrain(targetZRate, 0, 100);
-  int targetZ = zDepth * targetZRate / 100;
-  int currentZ = zDepth * currentZRate / 100;
-  //範囲外に行ってしまわないように
-  int minZ = -currentZ;
-  int maxZ = zDepth - currentZ;
-  int moveDiff = targetZ - currentZ;
-  moveDiff = constrain(moveDiff, minZ, maxZ);
-  Serial.println(moveDiff);
-  rotate(moveDiff, PULZ, DIRZ, ENAZ);
-  currentZRate = targetZ;
+  Serial.println("MoveZ");
+  currentZRate = sharedMove(targetZRate, currentZRate, zDepth, PULZ, DIRZ, ENAZ);
 }
 
-void nonInitializeErro() {
+void nonInitializeError() {
   Serial.println("please call Init() before call Move~()");
+}
+
+int sharedMove(int targetRate, int currentRate, int boardSize, int pul, int dir, int ena){
+  if (initialized == false) {
+    nonInitializeError();
+    return currentRate;
+  }
+
+  targetRate = constrain(targetRate, 0, 100);
+  int target = boardSize * targetRate / 100;
+  int current = boardSize * currentRate / 100;
+  //範囲外に行ってしまわないように
+  int moveDiff = target - current;
+  moveDiff = constrain(moveDiff, -current, boardSize - current);
+  Serial.println(moveDiff);
+  rotate(moveDiff, pul, dir, ena);
+  currentRate = target;
+  return currentRate;
 }
 #pragma endregion
