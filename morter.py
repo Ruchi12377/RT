@@ -82,7 +82,7 @@ def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
             targetYRate = start_y_rate
         
         #押し込み処理を入れる
-        #moveZ(any value...)
+        #moveZ(100)
         
         #上か下まで移動させる
         moveY(targetYRate)
@@ -90,13 +90,16 @@ def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
         time.sleep(getMoveYTime(targetYRate))
 
         #最後だけYを移動する
-        if(i == l - 1):
+        if(i == l - 1): 
+            #引く処理を入れる
+            #moveZ(0)
             break
 
         #横移動
         moveX(targetXRate)
         time.sleep(getMoveXTime(targetXRate))
 
+    #moveZ(push)
     print("reset")
     reset()
 
