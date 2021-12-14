@@ -12,6 +12,7 @@ import time
 import math
 import serial
 import OpenRTM_aist
+import morter as m
 sys.path.append(".")
 
 move_spec = ["implementation_id", "move",
@@ -140,89 +141,14 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 
 	def getMove(self):
 
-		#シリアル通信の準備を行う
-		ser = serial.Serial(port, 9600)
-		#シリアル通信が終わるまで待つ
-		time.sleep(3)
+		m.initialize(self._port, self._board_hard_width, self._board_hard_height, self._board_hard_depth, self._core_hard_width, self._board_rt_width, self._board_rt_height)
+		self.start_x_rate = m.pixelToRate(self.start_x, self._board_rt_width, self._board_hard_width)
+		self.start_y_rate = m.pixelToRate(self.start_y, self._board_rt_height, self._board_hard_height)
+		self.end_x_rate = m.pixelToRate(self.end_x, self._board_rt_width, self._boboard_hard_width)
+		self.end_y_rate = m.pixelToRate(self.end_y, self._board_rt_height, self._board_hard_height)
 
-		#シリアルでデータを送るための関数
-		def send(data):
-			ser.write(bytes(data, "utf-8"))
+		m.eraser(self.start_x_rate, self.start_y_rate, self.end_x_rate, self.end_y_rate)
 
-		#arduino側の機能を呼び出すための関数群
-		def init(x, y, z):
-			send("init {0} {1} {2}".format(x, y, z))
-		def reset():
-			ser.write(b"reset")
-		def moveX(rate):
-			send("moveX {0}".format(rate))
-		def moveY(rate):
-			send("moveY {0}".format(rate))
-		def moveZ(rate):
-			send("moveZ {0}".format(rate))
-		def rot(direction, value):
-			send("rot {0} {1}".format(direction, value))
-
-		#100移動に対して15秒かかるので
-		def getMoveXTime(amount):
-			return math.ceil(15.0 / 100.0 * amount)
-		def getMoveYTime(amount):
-			return math.ceil(15.0 / 75.0 * amount)
-
-		#boardの大きさを初期化
-		init(self._board_hard_width, self._board_hard_height, self._board_hard_depth)
-		time.sleep(3)
-
-		def pixelToRate(rtPixel, rtSize, hardSize):
-			return math.ceil(rtPixel / rtSize * hardSize)
-
-		def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
-			start_x = math.ceil(start_x_rate * self._board_hard_width / 100)
-			start_y = math.ceil(start_y_rate * self._board_hard_height / 100)
-			end_x = math.ceil(end_x_rate * self._board_hard_width / 100)
-			end_y = math.ceil(end_y_rate * self._board_hard_height / 100)
-
-			moveX(start_x_rate)
-			time.sleep(getMoveXTime(start_x_rate))
-			print(start_x_rate)
-
-			moveY(start_y_rate)
-			time.sleep(getMoveYTime(start_y_rate))
-			print(start_y_rate)
-
-			#何回ループするか
-			l = math.ceil((end_x - start_x) / self._core_hard_width) + 2
-			for i in range(1, l):
-				targetX = start_x + self._core_hard_width * i
-				targetXRate = math.ceil(targetX / self._board_hard_width * 100)
-				
-				if(i % 2 == 1):
-					targetYRate = end_y_rate
-				else:
-					targetYRate = start_y_rate
-				
-				#押し込み処理を入れる
-				#moveZ(any value...)
-				
-				#上か下まで移動させる
-				moveY(targetYRate)
-
-				time.sleep(getMoveYTime(targetYRate))
-
-				#最後だけYを移動する
-				if(i == l - 1):
-					break
-
-				#横移動
-				moveX(targetXRate)
-				print(targetXRate)
-				time.sleep(getMoveXTime(targetXRate))
-
-			print("reset")
-			reset()
-
-		eraser(10, 20, 40, 50)
-		ser.close()
 
 	def onExecute(self, ec_id):
 
@@ -241,9 +167,11 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 
 		return RTC.RTC_OK
 
-	#def onDeactivated(self, ec_id):
-	#
-	#	return RTC.RTC_OK
+	def onDeactivated(self, ec_id):
+
+		m.dispose()
+	
+		return RTC.RTC_OK
 
 
 
