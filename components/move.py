@@ -128,24 +128,29 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 
 	def onActivated(self, ec_id):
 		
-		self.start_x = 0
-		self.start_y = 0
-		self.end_x = 0
-		self.end_y = 0
+		self.start_x = 100
+		self.start_y = 100
+		self.end_x = 400
+		self.end_y = 200
 		self.start_x_rate = 0
 		self.start_y_rate = 0
 		self.end_x_rate = 0
 		self.end_y_rate = 0
 
+		self.getMove()
+
 		return RTC.RTC_OK
 
 	def getMove(self):
 
+		print("getmove")
 		m.initialize(self._port, self._board_hard_width, self._board_hard_height, self._board_hard_depth, self._core_hard_width, self._board_rt_width, self._board_rt_height)
+		m.init(self._board_hard_width, self._board_hard_height, self._board_hard_depth)
 		self.start_x_rate = m.pixelToRate(self.start_x, self._board_rt_width, self._board_hard_width)
 		self.start_y_rate = m.pixelToRate(self.start_y, self._board_rt_height, self._board_hard_height)
 		self.end_x_rate = m.pixelToRate(self.end_x, self._board_rt_width, self._boboard_hard_width)
 		self.end_y_rate = m.pixelToRate(self.end_y, self._board_rt_height, self._board_hard_height)
+		print(self.start_x_rate,self.start_y_rate,self.end_x_rate,self.end_y_rate)
 
 		m.eraser(self.start_x_rate, self.start_y_rate, self.end_x_rate, self.end_y_rate)
 

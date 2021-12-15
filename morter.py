@@ -20,12 +20,21 @@ is_init_hard = False
 
 #シリアル通信の準備を行う
 ser = serial.Serial()
+
 def initialize(port, width, height, depth, core_width, rt_width, rt_height):
 
     global is_init_module
+    global ser
+
+    global board_hard_width
+    global board_hard_height
+    global board_hard_depth
+    global core_hard_width
+    global board_rt_width
+    global board_rt_height
 
     #初期化が住んでいるので
-    if(is_init_module):
+    if(is_init_module == True):
         return
 
     board_hard_width = width
@@ -35,14 +44,17 @@ def initialize(port, width, height, depth, core_width, rt_width, rt_height):
     board_rt_width = rt_width
     board_rt_height = rt_height
     #シリアル通信が終わるまで待つ
-    ser.port = port
-    ser.baudrate = 9600
+    ser = serial.Serial(port, 9600)
+    if(ser.is_open == False):
+        ser.open()
+    ser.reset_input_buffer()
     time.sleep(3)
     is_init_module = True
     
 def dispose():
 
     global is_init_module
+    global ser
 
     #初期化が住んでいないので
     if(is_init_module == False):
@@ -55,16 +67,27 @@ def dispose():
 
 #シリアルでデータを送るための関数
 def send(data):
+    global ser
+    global is_init_module
+    print("send")
     #初期化が住んでいないので
     if(is_init_module == False):
+        print("return")
         return
+    print("write")
+
     ser.write(bytes(data, "utf-8"))
 
 #arduino側の機能を呼び出すための関数群
 def init(x, y, z):
+    print("init")
+    global is_init_hard
     is_init_hard = True
+    print("init2")
     send("init {0} {1} {2}".format(x, y, z))
+    print("sleep")
     time.sleep(2)
+    print("init3")
 def reset():
     ser.write(b"reset")
 def moveX(rate):
@@ -89,6 +112,10 @@ def pixelToRate(rtPixel, rtSize, hardSize):
     return math.ceil(rtPixel / rtSize * hardSize)
 
 def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
+    global board_hard_width
+    global board_hard_height
+    global core_hard_width
+
     start_x = math.ceil(start_x_rate * board_hard_width / 100)
     start_y = math.ceil(start_y_rate * board_hard_height / 100)
     end_x = math.ceil(end_x_rate * board_hard_width / 100)
