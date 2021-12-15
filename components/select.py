@@ -116,7 +116,7 @@ class select(OpenRTM_aist.DataFlowComponentBase):
 		
 		if self.state == True:
 
-			img_open = Image.fromarray(self.img_in)
+			img_open = Image.fromarray(self.img_in[:, :, ::-1].copy())
 			img = img_open.resize((1000, 300))
 
 			root = tkinter.Tk()

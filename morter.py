@@ -59,7 +59,6 @@ def dispose():
     #初期化が住んでいないので
     if(is_init_module == False):
         return
-    reset()
     time.sleep(10)
     ser.close()
     is_init_hard = False

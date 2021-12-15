@@ -132,10 +132,10 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 		self.start_y = 100
 		self.end_x = 400
 		self.end_y = 200
-		self.start_x_rate = 0
-		self.start_y_rate = 0
-		self.end_x_rate = 0
-		self.end_y_rate = 0
+		self.start_x_rate = 10
+		self.start_y_rate = 20
+		self.end_x_rate = 40
+		self.end_y_rate = 50
 
 		self.getMove()
 
@@ -144,15 +144,21 @@ class move(OpenRTM_aist.DataFlowComponentBase):
 	def getMove(self):
 
 		print("getmove")
-		m.initialize(self._port, self._board_hard_width, self._board_hard_height, self._board_hard_depth, self._core_hard_width, self._board_rt_width, self._board_rt_height)
-		m.init(self._board_hard_width, self._board_hard_height, self._board_hard_depth)
-		self.start_x_rate = m.pixelToRate(self.start_x, self._board_rt_width, self._board_hard_width)
-		self.start_y_rate = m.pixelToRate(self.start_y, self._board_rt_height, self._board_hard_height)
-		self.end_x_rate = m.pixelToRate(self.end_x, self._board_rt_width, self._boboard_hard_width)
-		self.end_y_rate = m.pixelToRate(self.end_y, self._board_rt_height, self._board_hard_height)
-		print(self.start_x_rate,self.start_y_rate,self.end_x_rate,self.end_y_rate)
+		print("before initialize")
+		m.initialize(self._port[0], self._board_hard_width, self._board_hard_height, self._board_hard_depth, self._core_hard_width, self._board_rt_width, self._board_rt_height)
+		print ("initialize")
+		m.init(100, 75, 20)
+		print("init")
+		#self.start_x_rate = m.pixelToRate(self.start_x, self._board_rt_width, self._board_hard_width)
+		#self.start_y_rate = m.pixelToRate(self.start_y, self._board_rt_height, self._board_hard_height)
+		#self.end_x_rate = m.pixelToRate(self.end_x, self._board_rt_width, self._boboard_hard_width)
+		#self.end_y_rate = m.pixelToRate(self.end_y, self._board_rt_height, self._board_hard_height)
+		#print(self.start_x_rate,self.start_y_rate,self.end_x_rate,self.end_y_rate)
 
 		m.eraser(self.start_x_rate, self.start_y_rate, self.end_x_rate, self.end_y_rate)
+		print("reset call")
+		m.dispose()
+
 
 
 	def onExecute(self, ec_id):
