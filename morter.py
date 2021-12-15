@@ -3,36 +3,68 @@ import time
 import math
 
 #port = "/dev/cu.usbmodem21101"
-port = "COM4"
+#port = "COM4"
 
 #ハードウェア側の大きさ
-board_hard_width = 100
-board_hard_height = 75
-board_hard_depth = 2
-core_hard_width = 9
+board_hard_width =0 
+board_hard_height = 0
+board_hard_depth = 0
+core_hard_width = 0
 
 #RTが扱うハードの大きさ
-board_rt_width = 1000
-board_rt_height = 300
+board_rt_width = 0
+board_rt_height = 0
 
-#仮
-start_x = 100
-start_y = 100
-end_x = 50
-end_y = 200
+is_init_module = False
+is_init_hard = False
 
 #シリアル通信の準備を行う
-ser = serial.Serial(port, 9600)
-#シリアル通信が終わるまで待つ
-time.sleep(3)
+ser = serial.Serial()
+def initialize(port, width, height, depth, core_width, rt_width, rt_height):
+
+    global is_init_module
+
+    #初期化が住んでいるので
+    if(is_init_module):
+        return
+
+    board_hard_width = width
+    board_hard_height = height
+    board_hard_depth = depth
+    core_hard_width = core_width
+    board_rt_width = rt_width
+    board_rt_height = rt_height
+    #シリアル通信が終わるまで待つ
+    ser.port = port
+    ser.baudrate = 9600
+    time.sleep(3)
+    is_init_module = True
+    
+def dispose():
+
+    global is_init_module
+
+    #初期化が住んでいないので
+    if(is_init_module == False):
+        return
+    reset()
+    time.sleep(10)
+    ser.close()
+    is_init_hard = False
+    is_init_module = False
 
 #シリアルでデータを送るための関数
 def send(data):
+    #初期化が住んでいないので
+    if(is_init_module == False):
+        return
     ser.write(bytes(data, "utf-8"))
 
 #arduino側の機能を呼び出すための関数群
 def init(x, y, z):
+    is_init_hard = True
     send("init {0} {1} {2}".format(x, y, z))
+    time.sleep(2)
 def reset():
     ser.write(b"reset")
 def moveX(rate):
@@ -51,8 +83,7 @@ def getMoveYTime(amount):
     return math.ceil(15.0 / 75.0 * amount)
 
 #boardの大きさを初期化
-init(board_hard_width, board_hard_height, board_hard_depth)
-time.sleep(3)
+#init(board_hard_width, board_hard_height, board_hard_depth)
 
 def pixelToRate(rtPixel, rtSize, hardSize):
     return math.ceil(rtPixel / rtSize * hardSize)
@@ -92,6 +123,7 @@ def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
 
         #最後だけYを移動する
         if(i == l - 1):
+            #moveZ(0)
             break
 
         #横移動
@@ -101,6 +133,3 @@ def eraser(start_x_rate, start_y_rate, end_x_rate, end_y_rate, ):
 
     print("reset")
     reset()
-
-eraser(10, 20, 40, 50)
-ser.close()
