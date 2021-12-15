@@ -1,5 +1,3 @@
-const int second = 304; //1周分のステッピングモーター回転の数
-
 //X stepping moter drive
 const int PULX = 12;
 const int DIRX = 13;
