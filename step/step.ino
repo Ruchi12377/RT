@@ -104,9 +104,10 @@ void loop() {
   }
 }
 
-
 //rotate stepping moter
 void rotate(long angle, int pul, int dir, int ena) {
+  const int max = 30;
+  const int min = 10;
   if (angle == 0) return;
 
   bool gen = angle > 0;
@@ -127,7 +128,7 @@ void rotate(long angle, int pul, int dir, int ena) {
 
     digitalWrite(ena, HIGH);
     digitalWrite(pul, HIGH);
-    delayMicroseconds(50);
+    delayMicroseconds(20);
     digitalWrite(pul, LOW);
     delayMicroseconds(50);
   }
